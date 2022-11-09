@@ -1,7 +1,9 @@
 package helpers
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -51,4 +53,45 @@ func ReqTranslate(body *ReqBody) ([]byte, error) {
 		return []byte(""), errors.New("Too many requests")
 	}
 	return body1, nil
+}
+
+type Resp struct {
+	Data struct {
+		Languages []struct {
+			Language string `json:"language"`
+		} `json:"languages"`
+	} `json:"data"`
+}
+
+func GetLanguages() ([]string, error) {
+	var language []string
+	url := "https://google-translate1.p.rapidapi.com/language/translate/v2/languages"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return language, err
+	}
+	//apiKey := flag.String("apiKey", "", "API key")
+	req.Header.Add("Accept-Encoding", "application/gzip")
+	req.Header.Add("X-RapidAPI-Key", "")
+	req.Header.Add("X-RapidAPI-Host", "google-translate1.p.rapidapi.com")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Println("error in request", err)
+	}
+
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return language, err
+	}
+	var rs Resp
+	err = json.Unmarshal(body, &rs)
+	if err != nil {
+		return language, err
+	}
+	for _, v := range rs.Data.Languages {
+		language = append(language, v.Language)
+	}
+	return language, nil
 }
